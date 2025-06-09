@@ -1,23 +1,26 @@
-version: '3.4'
+version: '3.8'
 
-services: 
+services:
   web:
-    image: nginx:1.14.2-alpine
+    image: nginx:1.24-alpine
     restart: always
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
       - ./www:/www
-      - ./conf.d:/etc/nginx/conf.d/
+      - ./conf.d:/etc/nginx/conf.d
       - ./dhparam:/etc/nginx/dhparam
-      - ./certbot/conf/:/etc/nginx/ssl/
+      - ./certbot/conf:/etc/nginx/ssl
       - ./certbot/data:/usr/share/nginx/html/letsencrypt
-    ports:
-      - 80:80
-      - 443:443
-  
+    depends_on:
+      - certbot
+
   certbot:
-     image: certbot/certbot:latest
-     command: certonly --webroot --webroot-path=/usr/share/nginx/html/letsencrypt --email credit812@gmail.com --agree-tos --no-eff-email -d www.onetop.n-e.kr
-     volumes:
-       - ./certbot/conf/:/etc/letsencrypt
-       - ./certbot/logs/:/var/log/letsencrypt
-       - ./certbot/data:/usr/share/nginx/html/letsencrypt
+    image: certbot/certbot:latest
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/logs:/var/log/letsencrypt
+      - ./certbot/data:/usr/share/nginx/html/letsencrypt
+    entrypoint: >
+      sh -c "trap exit TERM; while :; do certbot renew --webroot -w /usr/share/nginx/html/letsencrypt && nginx -s reload; sleep 12h; done"
